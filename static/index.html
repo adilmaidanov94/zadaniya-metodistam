@@ -285,6 +285,40 @@ details.hist summary{cursor:pointer;color:var(--muted);font-size:12.5px;font-wei
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1e293b;color:#fff;padding:11px 18px;border-radius:12px;box-shadow:var(--shadow-lg);z-index:80;font-size:13.5px;animation:fade .15s}
 .toast.bad{background:var(--s-over)}
 
+/* ---------- Notifications ---------- */
+.bell-wrap{position:relative}
+.bell{width:48px;height:48px;border-radius:14px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;color:var(--text);position:relative}
+.bell:hover{border-color:color-mix(in srgb,var(--muted) 60%,var(--line))}
+.bell svg{width:22px;height:22px}
+.bell.ring svg{animation:ring .9s ease}
+@keyframes ring{0%,100%{transform:rotate(0)}15%{transform:rotate(14deg)}30%{transform:rotate(-12deg)}45%{transform:rotate(9deg)}60%{transform:rotate(-6deg)}75%{transform:rotate(3deg)}}
+.badge{position:absolute;top:-7px;right:-7px;min-width:21px;height:21px;padding:0 6px;border-radius:99px;background:var(--s-over);color:#fff;font-size:11.5px;font-weight:700;display:grid;place-items:center;border:2px solid var(--main)}
+.notif-panel{position:absolute;right:0;top:calc(100% + 8px);width:380px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);z-index:40;display:flex;flex-direction:column;max-height:min(540px,calc(100vh - 120px));animation:fade .12s}
+.np-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.np-head b{font-size:15px}
+.np-list{overflow:auto;padding:6px;flex:1}
+.np-item{display:flex;gap:10px;width:100%;text-align:left;padding:10px;border-radius:10px;align-items:flex-start}
+.np-item:hover{background:var(--soft)}
+.np-item>i{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none}
+.np-item.unread>i{background:var(--accent)}
+.np-item.unread .np-text{font-weight:600}
+.np-text{display:block;font-size:13.5px;line-height:1.35}
+.np-time{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.np-empty{padding:30px 10px;text-align:center;color:var(--muted)}
+.np-foot{border-top:1px solid var(--line);padding:12px 14px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;font-size:13px}
+.np-link{color:var(--accent);font-weight:500;font-size:13px}
+.np-muted{color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.np-ok{color:var(--s-done);font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.np-muted svg,.np-ok svg{width:16px;height:16px}
+.sec{margin:8px 0 10px;font-size:15px}
+.steps{margin:0 0 14px;padding-left:20px;line-height:1.65}
+table.people{min-width:0;margin:4px 0 8px}
+table.people td{padding:9px 6px}
+table.people td.act{text-align:right;white-space:nowrap}
+table.people td.act .btn{margin-left:6px}
+a.btn{text-decoration:none;color:inherit}
+a.btn.primary{color:var(--accent-ink)}
+
 /* ---------- Responsive ---------- */
 @media (max-width:1280px){
   .board{grid-template-columns:repeat(var(--cols,4),minmax(260px,1fr));overflow-x:auto;padding-bottom:6px}
@@ -325,9 +359,13 @@ details.hist summary{cursor:pointer;color:var(--muted);font-size:12.5px;font-wei
   .legend{margin-left:0}
   .me .who{display:none}
 }
+@media (max-width:720px){
+  .notif-panel{position:fixed;left:16px;right:16px;top:72px;width:auto;max-width:none}
+  table.people td.act .btn{margin:3px 0 0 4px}
+}
 @media print{
   body{background:#fff}
-  .side,.toolbar,.topbar .search,.topbar .btn,.add-btn,.kebab,.no-print{display:none!important}
+  .side,.toolbar,.topbar .search,.topbar .btn,.bell-wrap,.add-btn,.kebab,.no-print{display:none!important}
   .app{display:block}
   .main{margin:0;box-shadow:none;padding:0;background:#fff}
 }
@@ -349,6 +387,7 @@ details.hist summary{cursor:pointer;color:var(--muted);font-size:12.5px;font-wei
         <p id="subtitle">Распределение задач, контроль выполнения и сроки</p>
       </div>
       <label class="search"><span id="searchIc"></span><input id="q" type="search" placeholder="Поиск по заданиям, методистам…" autocomplete="off"></label>
+      <div class="bell-wrap" id="bellWrap" hidden><button class="bell" id="bell" aria-label="Уведомления" title="Уведомления"></button></div>
       <button class="btn primary big" id="addBtn" hidden></button>
     </div>
 
@@ -405,6 +444,10 @@ const I = {
   up: svg('<path d="M12 19V5M6.5 10.5L12 5l5.5 5.5"/>'),
   inbox: svg('<path d="M3.5 13.5l2.5-8h12l2.5 8v5a1.5 1.5 0 0 1-1.5 1.5h-14a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M3.5 13.5h5l1.5 2.5h4l1.5-2.5h5"/>'),
   reset: svg('<path d="M4 4v6h6"/><path d="M5.6 15a7 7 0 1 0 1.6-7.4L4 10"/>'),
+  bell: svg('<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>'),
+  gear: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  send: svg('<path d="M21 3.5L3.5 10.6l6.4 2.7 2.6 6.7z"/><path d="M21 3.5L9.9 13.3"/>'),
+  copy: svg('<rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/>'),
 };
 const EMBLEM = `<svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="22.5" fill="var(--accent-soft)"/><g stroke="var(--accent-2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M11 35h26M13 32h22M14.5 20.5h19L24 13z"/><path d="M16.5 22.5v8M21 22.5v8M27 22.5v8M31.5 22.5v8"/></g><circle cx="24" cy="18" r="1.4" fill="var(--accent-2)"/></svg>`;
 const ART = (() => {
@@ -541,12 +584,45 @@ const Demo = (() => {
     update(t6, {progress: 30}, 'Улзира');
     const t7 = mk('Отчёт по методической работе', 'normal', -3, 'Перизат');
     update(t7, {progress: 100}, 'Перизат'); update(t7, {status: 'done'}, 'admin');
+    s.notifications = [];
+    s.tasks.filter(t => t.assignee).forEach(t => notify(t.assignee, `Вам назначено новое задание: «${t.title}»`, t.id));
+    notify('Перизат', `Задание «${t7.title}» принято. Спасибо!`, t7.id);
+    notify('Эльмира', `Срок задания «${t1.title}» прошёл (${fmtDate(t1.deadline)})`, t1.id);
+    notify('admin', `Перизат: задание «${t5.title}» готово, ждёт проверки`, t5.id);
+    notify('admin', `Просрочено: «${t1.title}» — Эльмира, срок был ${fmtDate(t1.deadline)}`, t1.id);
     return s;
   }
   function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && Array.isArray(v.tasks)) return (s = v); } catch(e) {} return seed(); }
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(s)); } catch(e) {} }
   const snapshot = () => ({version: s.version, tasks: JSON.parse(JSON.stringify(s.tasks)), methodists: METH,
-    online: auth && auth.role !== 'admin' ? [auth.role] : [], avatars: {}, logo: null});
+    online: auth && auth.role !== 'admin' ? [auth.role] : [], avatars: {}, logo: null,
+    notifications: (s.notifications || []).filter(n => auth && n.to === auth.role).slice(-60).reverse(),
+    telegram: {enabled: false, linked: []}});
+  // Уведомления — те же события, что в server.py (без Telegram)
+  function notify(to, text, task){
+    (s.notifications ||= []).push({id: Math.random().toString(16).slice(2, 12), to, at: now(), text, task, read: false});
+    s.notifications = s.notifications.slice(-200);
+  }
+  function events(b, a, user){
+    const t = a || b, q = `«${t.title}»`, a0 = b ? b.assignee : null;
+    if (!a) return a0 ? [[a0, `Задание ${q} отменено замдекана`]] : [];
+    const a1 = a.assignee, ev = [];
+    if (a1 !== a0) {
+      if (a1) ev.push([a1, `Вам назначено новое задание: ${q}`]);
+      if (a0) ev.push([a0, a1 ? `Задание ${q} передано: ${a1}` : `Задание ${q} снято с вас`]);
+      return ev;
+    }
+    if (!b || !a1) return ev;
+    if (user === 'admin') {
+      if (a.status !== b.status) ev.push([a1, a.status === 'done' ? `Задание ${q} принято. Спасибо!`
+        : ['review','done'].includes(b.status) ? `Задание ${q} возвращено на доработку` : `Статус задания ${q}: ${ST[a.status]}`]);
+      if (a.deadline !== b.deadline) ev.push([a1, `Изменён срок задания ${q}: ${a.deadline ? 'до ' + fmtDate(a.deadline) : 'без срока'}`]);
+      if (a.title !== b.title || a.desc !== b.desc) ev.push([a1, `Изменены условия задания ${q}`]);
+    } else if (a.status === 'review' && b.status !== 'review') ev.push(['admin', `${user}: задание ${q} готово, ждёт проверки`]);
+    else if (a.note && a.note !== (b.note || '')) ev.push(['admin', `Новый комментарий от ${user} к заданию ${q}`]);
+    return ev;
+  }
+  const emitEv = (b, a, user) => events(b, a, user).forEach(([to, text]) => notify(to, text, a ? a.id : null));
 
   return {
     snapshot,
@@ -557,19 +633,25 @@ const Demo = (() => {
       const user = who(body.auth);
       if (path === '/api/login') { if (user) return {ok: true}; throw new Error('Неверный PIN-код'); }
       if (!user) throw new Error('Нет доступа. Войдите заново.');
+      if (path === '/api/notifications/read') {
+        (s.notifications || []).forEach(n => { if (n.to === user && (!body.ids || body.ids.includes(n.id))) n.read = true; });
+        save(); return {ok: true, ...snapshot()};
+      }
+      if (path.startsWith('/api/telegram/')) throw new Error('В демо-версии Telegram недоступен. Он работает на локальном сервере.');
       const parts = path.replace(/^\/|\/$/g, '').split('/');
       let task;
-      if (parts.length === 2) task = create(body, user);
+      if (parts.length === 2) { task = create(body, user); emitEv(null, task, user); }
       else {
         task = s.tasks.find(t => t.id === parts[2]);
         if (!task) throw new Error('Задание не найдено (возможно, удалено)');
-        const action = parts[3] || 'update';
+        const action = parts[3] || 'update', before = JSON.parse(JSON.stringify(task));
         if (action === 'update') update(task, body, user);
         else if (action === 'move') move(task, body, user);
         else if (action === 'delete') {
           if (user !== 'admin') throw new Error('Удалять задания может только замдекана');
           s.tasks.splice(s.tasks.indexOf(task), 1);
         }
+        emitEv(before, action === 'delete' ? null : task, user);
       }
       s.version++; save();
       return {ok: true, task, ...snapshot()};
@@ -592,16 +674,17 @@ async function api(path, body={}){
     data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || 'Ошибка сервера');
   }
-  if (data.version) { state = {...state, ...data}; safeRender(); }
+  if (data.version) { state = {...state, ...data, notifKey: auth?.role}; safeRender(); }
   return data;
 }
 async function poll(){
   try{
-    const data = DEMO ? Demo.snapshot() : await (await fetch('/api/state?who=' + encodeURIComponent(auth?.role || ''), {cache:'no-store'})).json();
+    const key = auth?.role;
+    const data = DEMO ? Demo.snapshot() : await (await fetch('/api/state?who=' + encodeURIComponent(key || ''), {cache:'no-store'})).json();
+    data.notifKey = key;
     setConn(true);
-    const changed = data.version !== state.version || String(data.online) !== String(state.online)
-      || JSON.stringify(data.avatars) !== JSON.stringify(state.avatars) || data.logo !== state.logo;
-    if (changed) { state = data; safeRender(); }
+    const sig = d => JSON.stringify([d.version, d.online, d.avatars, d.logo, d.telegram, d.notifKey, (d.notifications || []).map(n => n.id + (n.read ? '+' : '-'))]);
+    if (sig(data) !== sig(state)) { state = data; safeRender(); }
   }catch(e){ setConn(false) }
 }
 let connOk = true;
@@ -672,6 +755,7 @@ function progHTML(t){ return `<div class="c-prog s-${t.status}"><div class="bar"
 function render(){
   pendingRender = false;
   renderSide();
+  handleNotifs();
   if (!auth) { $('#stats').innerHTML = ''; $('#view').innerHTML = ''; $('#views').innerHTML = ''; $('#addBtn').hidden = true; return; }
   if (view === 'report' && !isAdmin()) view = 'board';
   const add = $('#addBtn'); add.hidden = !isAdmin(); add.innerHTML = I.plus + 'Новое задание';
@@ -683,7 +767,8 @@ function renderSide(){
   $('#brand').innerHTML = `<span class="logo">${state.logo ? `<img src="${esc(state.logo)}" alt="">` : EMBLEM}</span><span><b>${esc(ORG.short)}</b><span>${esc(ORG.name)}</span></span>`;
   const items = [['board','Задания',I.board],['calendar','Календарь',I.cal],['list','Список',I.list]];
   if (isAdmin()) items.push(['report','Отчёты',I.chart]);
-  $('#nav').innerHTML = auth ? items.map(([k,l,ic]) => `<button class="nav-i${view===k?' on':''}" data-view="${k}">${ic}${l}</button>`).join('') : '';
+  $('#nav').innerHTML = auth ? items.map(([k,l,ic]) => `<button class="nav-i${view===k?' on':''}" data-view="${k}">${ic}${l}</button>`).join('')
+    + (isAdmin() ? `<button class="nav-i" data-settings>${I.gear}Настройки</button>` : '') : '';
   const name = isAdmin() ? 'Замдекана' : me();
   $('#sideFoot').innerHTML = !auth ? '' : `
     ${DEMO ? `<button class="btn small no-print" id="resetDemo" title="Вернуть примеры заданий">${I.reset}Сбросить демо</button>` : ''}
@@ -883,7 +968,10 @@ function openMenu(btn, t){
   m.onclick = e => { const b = e.target.closest('[data-act]'); if (!b) return; closeMenu(); doAction(t.id, b.dataset.act); };
 }
 function closeMenu(){ $('#menu')?.remove(); }
-document.addEventListener('mousedown', e => { if (!e.target.closest('#menu') && !e.target.closest('[data-menu]')) closeMenu(); });
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#menu') && !e.target.closest('[data-menu]')) closeMenu();
+  if (!e.target.closest('#bellWrap')) closeNotif();
+});
 window.addEventListener('resize', closeMenu);
 document.addEventListener('scroll', closeMenu, true);
 async function doAction(id, a){
@@ -904,7 +992,22 @@ const viewEl = $('#view');
 document.addEventListener('click', e => {
   const vb = e.target.closest('[data-view]');
   if (vb) { view = vb.dataset.view; ls.set('view', view); render(); window.scrollTo({top:0}); return; }
-  if (e.target.closest('#logout')) { if (confirm('Выйти и выбрать другого пользователя?')) { auth = null; ls.set('auth', null); render(); showLogin(); } return; }
+  if (e.target.closest('#logout')) { if (confirm('Выйти и выбрать другого пользователя?')) { auth = null; ls.set('auth', null); closeNotif(); render(); showLogin(); } return; }
+  if (e.target.closest('#bell')) return toggleNotif();
+  if (e.target.closest('[data-settings]')) { closeNotif(); return openSettings(); }
+  const ni = e.target.closest('[data-nid]');
+  if (ni) {
+    api('/api/notifications/read', {ids: [ni.dataset.nid]}).catch(() => {});
+    closeNotif();
+    if (ni.dataset.task) { if (state.tasks.some(t => t.id === ni.dataset.task)) openTask(ni.dataset.task); else toast('Задание уже удалено'); }
+    return;
+  }
+  if (e.target.closest('#readAll')) { api('/api/notifications/read').catch(err => toast(err.message, true)); return; }
+  if (e.target.closest('#tgLink')) { closeNotif(); return connectTelegram(); }
+  if (e.target.closest('#tgUnlink')) {
+    if (confirm('Отключить уведомления в Telegram?')) api('/api/telegram/unlink').then(() => toast('Telegram отключён')).catch(err => toast(err.message, true));
+    return;
+  }
   if (e.target.closest('#resetDemo')) { if (confirm('Вернуть демо-доску к исходным примерам?')) { Demo.reset(); poll(); toast('Демо сброшено'); } return; }
 });
 viewEl.addEventListener('click', e => {
@@ -1129,6 +1232,145 @@ function openEditor(t, preset=null){
   ov.querySelector('#ret')?.addEventListener('click', () => run(() => api('/api/tasks/'+t.id, {status:'progress'}), 'Возвращено в работу'));
 }
 
+/* ---------- Notifications ---------- */
+let seenNotifs = null, prevLinked = null, audioCtx = null;
+document.addEventListener('pointerdown', () => {
+  try { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume?.(); } catch(e) {}
+}, true);
+function beep(){
+  if (!audioCtx) return;
+  try {
+    [[880, 0], [1175, .16]].forEach(([f, d]) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t0 = audioCtx.currentTime + d;
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.18, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + .35);
+      o.connect(g).connect(audioCtx.destination); o.start(t0); o.stop(t0 + .4);
+    });
+  } catch(e) {}
+}
+const myNotifs = () => auth && state.notifKey === auth.role ? (state.notifications || []) : [];
+function handleNotifs(){
+  const wrap = $('#bellWrap'); wrap.hidden = !auth;
+  const bell = $('#bell');
+  if (!bell.innerHTML) bell.innerHTML = I.bell + '<span class="badge" id="badge" hidden></span>';
+  const list = myNotifs(), unread = list.filter(n => !n.read);
+  const badge = $('#badge'); badge.hidden = !unread.length; badge.textContent = unread.length > 99 ? '99+' : unread.length;
+  bell.title = unread.length ? `Непрочитанных: ${unread.length}` : 'Уведомления';
+  document.title = (unread.length ? `(${unread.length}) ` : '') + 'Задания методистам';
+  if (!auth || state.notifKey !== auth.role) { seenNotifs = null; prevLinked = null; return; }
+  if (seenNotifs) {
+    const fresh = unread.filter(n => !seenNotifs.has(n.id));
+    if (fresh.length) {
+      beep(); bell.classList.remove('ring'); void bell.offsetWidth; bell.classList.add('ring');
+      toast(fresh[0].text + (fresh.length > 1 ? ` (и ещё ${fresh.length - 1})` : ''));
+    }
+  }
+  seenNotifs = new Set(list.map(n => n.id));
+  const linked = !!state.telegram?.linked?.includes(auth.role);
+  if (prevLinked === false && linked) { toast('Telegram подключён: уведомления будут приходить туда'); if ($('.tg-connect')) closeModal(); }
+  prevLinked = linked;
+  if ($('.settings') && $('.settings').dataset.sig !== JSON.stringify(state.telegram)) openSettings();
+  renderNotifPanel();
+}
+function toggleNotif(){
+  if ($('#notifPanel')) return closeNotif();
+  const p = document.createElement('div'); p.id = 'notifPanel'; p.className = 'notif-panel';
+  $('#bellWrap').appendChild(p); renderNotifPanel();
+}
+function closeNotif(){ $('#notifPanel')?.remove(); }
+function renderNotifPanel(){
+  const p = $('#notifPanel'); if (!p) return;
+  const list = myNotifs(), unread = list.filter(n => !n.read).length;
+  p.innerHTML = `<div class="np-head"><b>Уведомления</b>${unread ? '<button class="np-link" id="readAll">Прочитать все</button>' : ''}</div>
+    <div class="np-list">${list.length ? list.map(n => `<button class="np-item${n.read ? '' : ' unread'}" data-nid="${n.id}" data-task="${esc(n.task || '')}"><i></i><span><span class="np-text">${esc(n.text)}</span><span class="np-time">${ago(n.at)}</span></span></button>`).join('')
+      : '<div class="np-empty">Пока уведомлений нет</div>'}</div>
+    <div class="np-foot">${tgBlockHTML()}</div>`;
+}
+function tgBlockHTML(){
+  const tg = state.telegram || {};
+  if (DEMO) return `<span class="np-muted">${I.send}В демо-версии Telegram не подключается</span>`;
+  if (!tg.enabled) return isAdmin() ? `<span class="np-muted">${I.send}Telegram-бот не настроен</span><button class="np-link" data-settings>Настроить</button>`
+    : `<span class="np-muted">${I.send}Уведомления в Telegram пока не настроены замдекана</span>`;
+  if ((tg.linked || []).includes(auth.role)) return `<span class="np-ok">${I.send}Telegram подключён</span><button class="np-link" id="tgUnlink">Отключить</button>`;
+  return `<button class="btn primary small" id="tgLink">${I.send}Получать уведомления в Telegram</button>`;
+}
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); return true; } catch(e) {}
+  const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.select(); let ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  ta.remove();
+  if (!ok) prompt('Скопируйте ссылку:', text);
+  return ok;
+}
+async function connectTelegram(){
+  let url;
+  try { url = (await api('/api/telegram/link')).url; } catch(err) { return toast(err.message, true); }
+  const ov = modal(`<div class="m-head"><h3>Уведомления в Telegram</h3><button class="x" data-close>×</button></div>
+    <div class="m-body">
+      <ol class="steps">
+        <li>Нажмите «Открыть Telegram»: откроется чат с ботом.</li>
+        <li>Нажмите в нём кнопку <b>«Старт»</b> (или «Запустить»).</li>
+        <li>Бот ответит «Готово». С этого момента уведомления о ваших заданиях будут приходить туда.</li>
+      </ol>
+      <p class="hint">Telegram только на телефоне? Скопируйте ссылку и откройте её на телефоне, например отправьте себе в WhatsApp.</p>
+    </div>
+    <div class="m-foot"><button class="btn" id="cp">${I.copy}Скопировать ссылку</button><span class="sp"></span>
+      <a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${I.send}Открыть Telegram</a></div>`, 'tg-connect');
+  ov.querySelector('#cp').onclick = async () => { if (await copyText(url)) toast('Ссылка скопирована'); };
+}
+async function openSettings(){
+  const tg = state.telegram || {};
+  let links = {};
+  if (tg.enabled && !DEMO) { try { links = (await api('/api/telegram/links')).links || {}; } catch(e) {} }
+  const people = [...state.methodists, 'admin'];
+  const rows = people.map(k => {
+    const name = k === 'admin' ? 'Замдекана' : k, linked = (tg.linked || []).includes(k);
+    return `<tr><td><span class="who-cell">${avatarHTML(name, 30)}${esc(name)}</span></td>
+      <td>${linked ? `<span class="np-ok">подключён</span>` : '<span class="np-muted">не подключён</span>'}</td>
+      <td class="act"><button class="btn small" data-copy="${esc(links[k] || '')}">${I.copy}Ссылка</button>${linked ? `<button class="btn small" data-test="${esc(k)}">${I.send}Тест</button>` : ''}</td></tr>`;
+  }).join('');
+  const ov = modal(`<div class="m-head"><h3>Настройки</h3><button class="x" data-close>×</button></div>
+    <div class="m-body">
+      <h4 class="sec">Уведомления в Telegram</h4>
+      ${DEMO ? '<div class="notice s-progress">В демо-версии Telegram недоступен. Он работает при запуске на локальном сервере.</div>'
+        : tg.enabled ? `<div class="notice s-done">Бот подключён: <b>@${esc(tg.bot)}</b>. Компьютер с сервером должен быть включён и подключён к интернету.</div>`
+        : `<ol class="steps">
+            <li>Откройте в Telegram <b>@BotFather</b> и отправьте ему <b>/newbot</b>.</li>
+            <li>Придумайте боту название (например, «Задания методистам ФИТ») и адрес, который заканчивается на <b>bot</b>.</li>
+            <li>BotFather пришлёт <b>токен</b>, длинную строку вида 1234567890:AAH… Скопируйте её и вставьте ниже.</li>
+          </ol>`}
+      ${DEMO ? '' : `<div class="field"><label>${tg.enabled ? 'Сменить бота: новый токен' : 'Токен бота'}</label>
+        <div class="pin-row" style="margin:0"><input class="input" id="tgToken" type="password" placeholder="1234567890:AAH…" autocomplete="off"><button class="btn primary" id="tgSave">Сохранить</button></div></div>`}
+      ${tg.enabled ? `<table class="people"><tbody>${rows}</tbody></table>
+        <p class="hint">Отправьте каждому его личную ссылку (например, в WhatsApp): она откроет бота, нужно нажать «Старт». Методисты могут подключиться и сами: колокольчик → «Получать уведомления в Telegram».</p>` : ''}
+      <h4 class="sec" style="margin-top:18px">Что и кому приходит</h4>
+      <ul class="steps">
+        <li><b>Методисту:</b> новое задание, передача или снятие задания, изменение срока или условий, «принято», «возвращено на доработку».</li>
+        <li><b>Напоминания о сроках:</b> за день до срока, в день срока и при просрочке (о просрочке узнаёт и замдекана). Приходят с 8:00 до 21:00.</li>
+        <li><b>Замдекана:</b> задание отправлено на проверку, новый комментарий методиста.</li>
+      </ul>
+      ${tg.enabled && !DEMO ? '<button class="btn danger small" id="tgOff">Отключить бота</button>' : ''}
+    </div>
+    <div class="m-foot"><span class="sp"></span><button class="btn" data-close>Закрыть</button></div>`, 'settings');
+  ov.querySelector('.settings').dataset.sig = JSON.stringify(state.telegram);
+  ov.querySelector('#tgSave')?.addEventListener('click', async e => {
+    const token = ov.querySelector('#tgToken').value.trim();
+    if (!token) return toast('Вставьте токен от @BotFather', true);
+    e.target.disabled = true; e.target.textContent = 'Проверяю…';
+    try { await api('/api/telegram/config', {token}); toast('Бот подключён'); openSettings(); }
+    catch(err) { toast(err.message, true); e.target.disabled = false; e.target.textContent = 'Сохранить'; }
+  });
+  ov.querySelector('#tgOff')?.addEventListener('click', async () => {
+    if (!confirm('Отключить Telegram-бота? Уведомления в Telegram перестанут приходить всем.')) return;
+    try { await api('/api/telegram/config', {token: ''}); toast('Бот отключён'); openSettings(); } catch(err) { toast(err.message, true); }
+  });
+  ov.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { if (b.dataset.copy && await copyText(b.dataset.copy)) toast('Ссылка скопирована'); });
+  ov.querySelectorAll('[data-test]').forEach(b => b.onclick = async () => {
+    try { await api('/api/telegram/test', {to: b.dataset.test}); toast('Тестовое сообщение отправлено'); } catch(err) { toast(err.message, true); }
+  });
+}
+
 /* ---------- Login ---------- */
 function showLogin(){
   const ms = state.methodists.length ? state.methodists : ['Эльмира','Улзира','Перизат'];
@@ -1148,7 +1390,7 @@ function showLogin(){
       <div class="err" id="err"></div>
     </div>`, 'login');
   const login = async a => {
-    try { auth = a; await api('/api/login'); ls.set('auth', JSON.stringify(a)); closeModal(); render(); poll(); }
+    try { auth = a; await api('/api/login'); ls.set('auth', JSON.stringify(a)); closeModal(); seenNotifs = null; render(); poll(); }
     catch(err) { auth = null; ov.querySelector('#err').textContent = err.message; }
   };
   ov.querySelectorAll('[data-role]').forEach(b => b.onclick = () => {
