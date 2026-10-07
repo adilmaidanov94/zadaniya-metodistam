@@ -320,7 +320,9 @@ if __name__ == "__main__":
     print(f"  На этом компьютере:  http://localhost:{PORT}")
     if ip:
         print(f"  Для методистов (локальная сеть):  http://{ip}:{PORT}")
-    print(f"  PIN замдекана: {PIN}   (изменить: ZAM_PIN=xxxx python3 server.py)")
+    print(f"  PIN замдекана: {PIN}")
+    if PIN == "1234":
+        print("  Смените PIN: в start.bat (Windows) или ZAM_PIN=xxxx python3 server.py (Mac)")
     print("  Остановить: Ctrl+C")
     print("=" * 56)
     try:
