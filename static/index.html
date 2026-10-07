@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задания методистам</title>
+<style>
+:root{
+  --bg:#f3f4f7; --panel:#ffffff; --col:#eceef3; --text:#1c2230; --muted:#677084; --line:#dfe2e9;
+  --accent:#2f5bd3; --accent-ink:#fff; --danger:#d23b33;
+  --s-new:#8a93a6; --s-progress:#2f6fe0; --s-review:#c98300; --s-done:#1e9a52;
+  --p-high:#e0473e; --p-normal:#4d7be6; --p-low:#a6aec0;
+  --m0:#0f8f84; --m1:#7a4bd3; --m2:#d9661f;
+  --shadow:0 1px 2px rgba(20,30,50,.07),0 3px 10px rgba(20,30,50,.05);
+  --shadow-lg:0 12px 40px rgba(15,25,45,.22);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14171e; --panel:#1f232c; --col:#191c24; --text:#e7eaf1; --muted:#98a0b3; --line:#2e3340;
+    --accent:#6b8ff0; --accent-ink:#0d1220; --danger:#f0675f;
+    --s-new:#8f98ab; --s-progress:#5f93f2; --s-review:#e3a52a; --s-done:#3dbb72;
+    --p-high:#f0675f; --p-normal:#6b8ff0; --p-low:#6f778a;
+    --m0:#2bb5a8; --m1:#9a74ea; --m2:#ef8a45;
+    --shadow:0 1px 2px rgba(0,0,0,.3); --shadow-lg:0 12px 40px rgba(0,0,0,.55);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--text)}
+
+/* ---------- Header ---------- */
+header{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand h1{margin:0;font-size:18px;letter-spacing:-.01em}
+.brand .sub{color:var(--muted);font-size:12.5px;display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--s-done);display:inline-block}
+.dot.off{background:var(--danger)}
+.summary{flex:1;display:flex;align-items:center;gap:14px;min-width:260px}
+.summary .big{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.summary .bar{flex:1;max-width:320px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--col);color:var(--muted);white-space:nowrap}
+.chip b{color:var(--text);font-weight:600}
+.chip.warn b{color:var(--danger)}
+.chip.rev b{color:var(--s-review)}
+.actions{display:flex;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 12px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--danger)}
+.btn.ok{background:var(--s-done);border-color:var(--s-done);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--col)}
+.btn.small{padding:4px 9px;font-size:12.5px}
+.who{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border-radius:99px;border:1px solid var(--line);background:var(--panel)}
+.avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;flex:none;background:var(--muted)}
+.c-m0{--mc:var(--m0)} .c-m1{--mc:var(--m1)} .c-m2{--mc:var(--m2)} .c-admin{--mc:#3b4252} .c-bank{--mc:var(--muted)}
+.avatar{background:var(--mc)}
+
+/* ---------- Progress bar ---------- */
+.bar{height:8px;background:var(--col);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--bar,var(--accent));border-radius:99px;transition:width .4s ease}
+
+/* ---------- Board ---------- */
+.board{display:grid;grid-template-columns:repeat(var(--cols,4),minmax(260px,1fr));gap:16px;padding:18px 20px 40px;align-items:start}
+.col{background:var(--col);border-radius:14px;border:1px solid var(--line);display:flex;flex-direction:column;min-height:300px;transition:box-shadow .15s,border-color .15s}
+.col.over{border-color:var(--mc);box-shadow:0 0 0 3px color-mix(in srgb,var(--mc) 25%,transparent)}
+.col.mine{border-color:var(--mc)}
+.col-head{padding:14px 14px 12px;border-bottom:1px solid var(--line);border-top:4px solid var(--mc);border-radius:14px 14px 0 0;background:var(--panel)}
+.col.bank .col-head{border-top-style:dashed}
+.col-title{display:flex;align-items:center;gap:10px}
+.col-title h2{margin:0;font-size:16px;flex:1}
+.col-title .tag{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--mc);color:#fff;font-weight:600}
+.col-pct{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--mc)}
+.col-sub{display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px;margin:10px 0 6px}
+.col-head .bar{--bar:var(--mc)}
+.col-head .chips{margin-top:10px;gap:5px}
+.pill.zero{opacity:.5}
+.col-body{padding:10px;display:flex;flex-direction:column;gap:9px;flex:1;min-height:140px}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:26px 10px;border:1.5px dashed var(--line);border-radius:10px}
+.hint{color:var(--muted);font-size:12.5px;margin-top:6px}
+
+/* ---------- Card ---------- */
+.card{background:var(--panel);border-radius:10px;padding:10px 12px 10px 14px;box-shadow:var(--shadow);border:1px solid var(--line);position:relative;cursor:pointer;transition:transform .12s,box-shadow .12s,opacity .12s}
+.card::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;background:var(--pc)}
+.card.p-high{--pc:var(--p-high)} .card.p-normal{--pc:var(--p-normal)} .card.p-low{--pc:var(--p-low)}
+.card:hover{box-shadow:0 2px 6px rgba(20,30,50,.12),0 6px 18px rgba(20,30,50,.08)}
+.card[draggable=true]{cursor:grab}
+.card.dragging{opacity:.35;transform:scale(.98)}
+.card.st-done{opacity:.72}
+.card.st-done .c-title{text-decoration:line-through;text-decoration-color:var(--muted)}
+.c-top{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.pill{font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:99px;color:var(--sc);background:color-mix(in srgb,var(--sc) 14%,transparent);white-space:nowrap}
+.s-new{--sc:var(--s-new)} .s-progress{--sc:var(--s-progress)} .s-review{--sc:var(--s-review)} .s-done{--sc:var(--s-done)}
+.prio{font-size:11.5px;color:var(--p-high);font-weight:600}
+.c-title{font-weight:600;font-size:14px;line-height:1.35;word-wrap:break-word}
+.c-meta{display:flex;align-items:center;gap:10px;margin-top:6px;color:var(--muted);font-size:12px;flex-wrap:wrap}
+.c-meta svg{width:13px;height:13px;vertical-align:-2px;margin-right:3px}
+.due.overdue{color:var(--danger);font-weight:600}
+.due.today{color:var(--s-review);font-weight:600}
+.c-prog{display:flex;align-items:center;gap:8px;margin-top:8px}
+.c-prog .bar{flex:1;height:6px}
+.c-prog .bar>i{background:var(--sc)}
+.c-prog span{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;width:34px;text-align:right}
+.c-foot{margin-top:6px;font-size:11.5px;color:var(--muted)}
+.placeholder{height:46px;border-radius:10px;border:2px dashed var(--mc);background:color-mix(in srgb,var(--mc) 8%,transparent)}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(10,15,25,.45);display:grid;place-items:center;z-index:50;padding:16px;animation:fade .12s}
+@keyframes fade{from{opacity:0}}
+.modal{background:var(--panel);border-radius:16px;box-shadow:var(--shadow-lg);width:min(620px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column}
+.m-head{padding:18px 22px 10px;display:flex;align-items:flex-start;gap:12px}
+.m-head h3{margin:0;font-size:18px;flex:1}
+.m-body{padding:6px 22px 14px;overflow:auto}
+.m-foot{padding:12px 22px 18px;display:flex;gap:8px;align-items:center;border-top:1px solid var(--line)}
+.m-foot .sp{flex:1}
+.field{margin-bottom:14px}
+.field>label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:8px 10px;outline:none}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+textarea.input{min-height:80px;resize:vertical}
+.row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:5px 12px;font-size:13px;font-weight:500}
+.seg button.on{border-color:var(--sc);background:color-mix(in srgb,var(--sc) 15%,transparent);color:var(--sc);font-weight:600}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.range-row{display:flex;align-items:center;gap:12px}
+.range-row input[type=range]{flex:1;accent-color:var(--accent)}
+.range-row .val{font-weight:700;font-size:18px;width:52px;text-align:right;font-variant-numeric:tabular-nums}
+.quick{display:flex;gap:6px;margin-top:6px}
+.quick button{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:2px 8px;font-size:12px}
+.readonly{background:var(--bg);border-radius:9px;padding:10px 12px;white-space:pre-wrap;word-wrap:break-word}
+.readonly.muted{color:var(--muted)}
+.notice{border-radius:9px;padding:9px 12px;font-size:13px;margin-bottom:14px;background:color-mix(in srgb,var(--sc) 12%,transparent);color:var(--text);border:1px solid color-mix(in srgb,var(--sc) 35%,transparent)}
+.meta-line{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-bottom:14px}
+.meta-line b{color:var(--text);font-weight:600}
+details.hist summary{cursor:pointer;color:var(--muted);font-size:12.5px;font-weight:500}
+.hist ul{list-style:none;padding:0;margin:8px 0 0;font-size:12.5px}
+.hist li{padding:4px 0;border-bottom:1px dashed var(--line);display:flex;gap:8px}
+.hist li time{color:var(--muted);flex:none;width:118px}
+.x{border:none;background:none;font-size:22px;line-height:1;color:var(--muted);padding:0 4px}
+
+/* ---------- Login ---------- */
+.login .m-body{padding:4px 22px 22px}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.role{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;text-align:left;font-weight:600}
+.role:hover{border-color:var(--mc)}
+.role small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.pin-row{display:flex;gap:8px;margin-top:14px}
+.err{color:var(--danger);font-size:13px;margin-top:8px;min-height:18px}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#222838;color:#fff;padding:10px 16px;border-radius:10px;box-shadow:var(--shadow-lg);z-index:80;font-size:13.5px;animation:fade .15s}
+.toast.bad{background:var(--danger)}
+
+@media (max-width:1100px){.board{grid-template-columns:repeat(var(--cols,4),minmax(250px,1fr));overflow-x:auto}}
+@media (max-width:720px){
+  header{padding:10px 16px}
+  .board{grid-template-columns:1fr;padding:14px 16px 30px}
+  .row{grid-template-columns:1fr}
+  .roles{grid-template-columns:1fr}
+  .summary .bar{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Задания методистам</h1>
+    <div class="sub"><span class="dot" id="conn"></span><span id="connText">на связи</span></div>
+  </div>
+  <div class="summary" id="summary"></div>
+  <div class="actions" id="actions"></div>
+</header>
+<main class="board" id="board"></main>
+
+<script>
+const ST = {new:'Новое', progress:'В работе', review:'На проверке', done:'Выполнено'};
+const PR = {high:'Срочно', normal:'Обычный', low:'Не срочно'};
+const MONTHS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+const ICON_CAL = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>';
+const ICON_NOTE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h11v7h-6l-3 3v-3h-2z"/></svg>';
+
+const ls = {
+  get(k){ try{ return localStorage.getItem(k) }catch(e){ return null } },
+  set(k,v){ try{ v==null ? localStorage.removeItem(k) : localStorage.setItem(k,v) }catch(e){} }
+};
+
+let state = {version:0, tasks:[], methodists:[]};
+let auth = null;
+try { auth = JSON.parse(ls.get('auth')||'null') } catch(e) {}
+let hideDone = ls.get('hideDone') === '1';
+let dragId = null, pendingRender = false;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isAdmin = () => auth?.role === 'admin';
+const me = () => isAdmin() ? null : auth?.role;
+const mClass = name => { const i = state.methodists.indexOf(name); return i >= 0 ? 'c-m'+i : (name === 'admin' ? 'c-admin' : 'c-bank'); };
+
+/* ---------- API ---------- */
+async function api(path, body={}){
+  const r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...body, auth})});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Ошибка сервера');
+  if (data.version) { state = {version:data.version, tasks:data.tasks, methodists:data.methodists}; safeRender(); }
+  return data;
+}
+async function poll(){
+  try{
+    const r = await fetch('/api/state', {cache:'no-store'});
+    const data = await r.json();
+    setConn(true);
+    if (data.version !== state.version) { state = data; safeRender(); }
+  }catch(e){ setConn(false) }
+}
+function setConn(ok){
+  $('#conn').classList.toggle('off', !ok);
+  $('#connText').textContent = ok ? 'на связи · обновляется автоматически' : 'нет связи с сервером';
+}
+function safeRender(){ if (dragId) pendingRender = true; else render(); }
+
+/* ---------- Helpers ---------- */
+function todayStr(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDate(s){ if(!s) return ''; const [y,m,d] = s.split('-').map(Number); return d+' '+MONTHS[m-1]+(y !== new Date().getFullYear() ? ' '+y : ''); }
+function dueInfo(t){
+  if (!t.deadline) return null;
+  const today = todayStr();
+  if (t.status !== 'done' && t.deadline < today) return {cls:'overdue', text:'просрочено · '+fmtDate(t.deadline)};
+  if (t.status !== 'done' && t.deadline === today) return {cls:'today', text:'сегодня'};
+  return {cls:'', text:'до '+fmtDate(t.deadline)};
+}
+function ago(iso){
+  if (!iso) return '';
+  const d = new Date(iso), s = (Date.now() - d) / 1000;
+  if (s < 60) return 'только что';
+  if (s < 3600) return Math.floor(s/60)+' мин назад';
+  if (s < 86400) return Math.floor(s/3600)+' ч назад';
+  if (s < 172800) return 'вчера';
+  return d.getDate()+' '+MONTHS[d.getMonth()];
+}
+function fmtStamp(iso){ const d = new Date(iso); return d.getDate()+' '+MONTHS[d.getMonth()]+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function colTasks(key){ return state.tasks.filter(t => (t.assignee||null) === key).sort((a,b) => a.order - b.order); }
+function stats(tasks){
+  const c = {new:0, progress:0, review:0, done:0}; let sum = 0, overdue = 0; const today = todayStr();
+  tasks.forEach(t => { c[t.status]++; sum += t.progress; if (t.deadline && t.deadline < today && t.status !== 'done') overdue++; });
+  return {total:tasks.length, c, overdue, pct: tasks.length ? Math.round(sum/tasks.length) : 0};
+}
+function toast(msg, bad){
+  document.querySelectorAll('.toast').forEach(e => e.remove());
+  const el = document.createElement('div'); el.className = 'toast'+(bad?' bad':''); el.textContent = msg;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 2800);
+}
+
+/* ---------- Render ---------- */
+function render(){
+  pendingRender = false;
+  if (!auth) { $('#board').innerHTML = ''; $('#summary').innerHTML = ''; $('#actions').innerHTML = ''; return; }
+  const cols = [];
+  if (isAdmin()) cols.push({key:null, name:'Банк заданий', bank:true});
+  state.methodists.forEach(m => cols.push({key:m, name:m}));
+  const board = $('#board');
+  board.style.setProperty('--cols', cols.length);
+  board.innerHTML = cols.map(colHTML).join('');
+  renderHeader();
+}
+
+function renderHeader(){
+  const scope = isAdmin() ? state.tasks.filter(t => t.assignee) : colTasks(me());
+  const s = stats(scope);
+  const label = isAdmin() ? 'общий прогресс' : 'мой прогресс';
+  $('#summary').innerHTML = `
+    <div><div class="big">${s.pct}%</div><div style="font-size:12px;color:var(--muted)">${label}</div></div>
+    <div class="bar"><i style="width:${s.pct}%"></i></div>
+    <div class="chips">
+      <span class="chip">Выполнено <b>${s.c.done}</b> из <b>${s.total}</b></span>
+      ${s.c.review ? `<span class="chip rev">На проверке <b>${s.c.review}</b></span>` : ''}
+      ${s.overdue ? `<span class="chip warn">Просрочено <b>${s.overdue}</b></span>` : ''}
+      ${isAdmin() && colTasks(null).length ? `<span class="chip">В банке <b>${colTasks(null).length}</b></span>` : ''}
+    </div>`;
+  const whoName = isAdmin() ? 'Замдекана' : me();
+  $('#actions').innerHTML = `
+    <button class="btn ghost small" id="toggleDone">${hideDone ? 'Показать выполненные' : 'Скрыть выполненные'}</button>
+    ${isAdmin() ? '<button class="btn primary" id="addBtn">+ Новое задание</button>' : ''}
+    <button class="who" id="whoBtn" title="Сменить пользователя"><span class="avatar ${isAdmin()?'c-admin':mClass(whoName)}">${esc(whoName[0])}</span>${esc(whoName)}</button>`;
+  $('#toggleDone').onclick = () => { hideDone = !hideDone; ls.set('hideDone', hideDone ? '1' : '0'); render(); };
+  $('#whoBtn').onclick = () => { if (confirm('Выйти и выбрать другого пользователя?')) { auth = null; ls.set('auth', null); render(); showLogin(); } };
+  if (isAdmin()) $('#addBtn').onclick = () => openEditor(null);
+}
+
+function colHTML(col){
+  const tasks = colTasks(col.key);
+  const visible = hideDone ? tasks.filter(t => t.status !== 'done') : tasks;
+  const s = stats(tasks);
+  const cls = col.bank ? 'c-bank' : mClass(col.key);
+  const mine = col.key && col.key === me();
+  let head;
+  if (col.bank) {
+    head = `<div class="col-title"><span class="avatar c-bank">+</span><h2>Банк заданий</h2><button class="btn small" data-add>+ Добавить</button></div>
+            <div class="hint">Перетащите карточку в колонку методиста, чтобы назначить задание.</div>`;
+  } else {
+    head = `<div class="col-title"><span class="avatar">${esc(col.name[0])}</span><h2>${esc(col.name)}</h2>${mine ? '<span class="tag">Мои задания</span>' : ''}<span class="col-pct">${s.pct}%</span></div>
+      <div class="col-sub"><span>Выполнено ${s.c.done} из ${s.total}</span>${s.overdue ? `<span style="color:var(--danger);font-weight:600">просрочено: ${s.overdue}</span>` : ''}</div>
+      <div class="bar"><i style="width:${s.pct}%"></i></div>
+      <div class="chips">${['new','progress','review','done'].map(k => `<span class="pill s-${k}${s.c[k] ? '' : ' zero'}">${ST[k]} ${s.c[k]}</span>`).join('')}</div>`;
+  }
+  let body;
+  if (visible.length) body = visible.map(cardHTML).join('');
+  else if (tasks.length) body = `<div class="empty">Все задания выполнены</div>`;
+  else body = `<div class="empty">${col.bank ? 'Нажмите «+ Добавить», чтобы создать задание' : (isAdmin() ? 'Перетащите задание сюда' : 'Заданий пока нет')}</div>`;
+  return `<section class="col ${cls}${col.bank ? ' bank' : ''}${mine ? ' mine' : ''}" data-key="${esc(col.key ?? '')}">
+    <div class="col-head">${head}</div><div class="col-body">${body}</div></section>`;
+}
+
+function cardHTML(t){
+  const due = dueInfo(t);
+  return `<article class="card p-${t.priority} st-${t.status} s-${t.status}" data-id="${t.id}" ${isAdmin() ? 'draggable="true"' : ''}>
+    <div class="c-top"><span class="pill">${ST[t.status]}</span>${t.priority === 'high' ? '<span class="prio">Срочно</span>' : ''}</div>
+    <div class="c-title">${esc(t.title)}</div>
+    ${(due || t.note) ? `<div class="c-meta">${due ? `<span class="due ${due.cls}">${ICON_CAL}${due.text}</span>` : ''}${t.note ? `<span title="Есть комментарий">${ICON_NOTE}комментарий</span>` : ''}</div>` : ''}
+    ${t.assignee ? `<div class="c-prog"><div class="bar"><i style="width:${t.progress}%"></i></div><span>${t.progress}%</span></div>` : ''}
+    ${t.assignee ? `<div class="c-foot">${esc(t.updated_by || '')} · ${ago(t.updated_at)}</div>` : ''}
+  </article>`;
+}
+
+/* ---------- Drag & drop (только замдекана) ---------- */
+const board = $('#board');
+let ph = null;
+board.addEventListener('click', e => {
+  if (e.target.closest('[data-add]')) return openEditor(null);
+  const card = e.target.closest('.card');
+  if (card) openTask(card.dataset.id);
+});
+board.addEventListener('dragstart', e => {
+  const card = e.target.closest('.card');
+  if (!card || !isAdmin()) return;
+  dragId = card.dataset.id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragId);
+  requestAnimationFrame(() => card.classList.add('dragging'));
+});
+board.addEventListener('dragend', () => {
+  dragId = null;
+  ph?.remove(); ph = null;
+  document.querySelectorAll('.col.over').forEach(c => c.classList.remove('over'));
+  document.querySelectorAll('.card.dragging').forEach(c => c.classList.remove('dragging'));
+  if (pendingRender) render();
+});
+board.addEventListener('dragover', e => {
+  if (!dragId) return;
+  const col = e.target.closest('.col'); if (!col) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.col.over').forEach(c => c !== col && c.classList.remove('over'));
+  col.classList.add('over');
+  const body = col.querySelector('.col-body');
+  if (!ph) { ph = document.createElement('div'); ph.className = 'placeholder'; }
+  const cards = [...body.querySelectorAll('.card:not(.dragging)')];
+  const next = cards.find(c => { const r = c.getBoundingClientRect(); return e.clientY < r.top + r.height/2; });
+  body.querySelector('.empty')?.style.setProperty('display','none');
+  if (next) { if (ph.nextSibling !== next) body.insertBefore(ph, next); }
+  else if (ph.parentNode !== body || ph.nextSibling) body.appendChild(ph);
+});
+board.addEventListener('dragleave', e => {
+  const col = e.target.closest('.col');
+  if (col && !col.contains(e.relatedTarget)) {
+    col.classList.remove('over');
+    if (ph?.parentNode === col.querySelector('.col-body')) { ph.remove(); col.querySelector('.empty')?.style.removeProperty('display'); }
+  }
+});
+board.addEventListener('drop', async e => {
+  const col = e.target.closest('.col');
+  if (!dragId || !col) return;
+  e.preventDefault();
+  const id = dragId;
+  const assignee = col.dataset.key || null;
+  // следующая карточка после плейсхолдера (не перетаскиваемая)
+  let n = ph?.nextElementSibling;
+  while (n && (n.dataset.id === id)) n = n.nextElementSibling;
+  const before = n?.classList.contains('card') ? n.dataset.id : null;
+  const t = state.tasks.find(x => x.id === id);
+  const changedPerson = t && (t.assignee||null) !== assignee;
+  // оптимистичное обновление
+  if (t) {
+    const list = colTasks(assignee).filter(x => x.id !== id);
+    const idx = before ? list.findIndex(x => x.id === before) : -1;
+    list.splice(idx < 0 ? list.length : idx, 0, t);
+    t.assignee = assignee; list.forEach((x,i) => x.order = i);
+  }
+  try {
+    await api('/api/tasks/'+id+'/move', {assignee, before});
+    if (changedPerson) toast(assignee ? `Задание назначено: ${assignee}` : 'Задание возвращено в банк');
+  } catch(err) { toast(err.message, true); poll(); }
+});
+
+/* ---------- Modals ---------- */
+function modal(html, cls=''){
+  closeModal();
+  const ov = document.createElement('div');
+  ov.className = 'overlay'; ov.id = 'ov';
+  ov.innerHTML = `<div class="modal ${cls}" role="dialog" aria-modal="true">${html}</div>`;
+  ov.addEventListener('mousedown', e => { if (e.target === ov && !cls.includes('login')) closeModal(); });
+  document.body.appendChild(ov);
+  ov.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
+  return ov;
+}
+function closeModal(){ $('#ov')?.remove(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('.login')) closeModal(); });
+
+function histHTML(t){
+  if (!t.log?.length) return '';
+  return `<details class="hist"><summary>История изменений (${t.log.length})</summary><ul>${
+    t.log.slice().reverse().map(l => `<li><time>${fmtStamp(l.at)}</time><span><b>${esc(l.by)}</b> — ${esc(l.text)}</span></li>`).join('')}</ul></details>`;
+}
+
+function statusSeg(current, allowed){
+  return `<div class="seg" id="seg">${Object.keys(ST).map(k =>
+    `<button type="button" data-v="${k}" class="s-${k}${k===current?' on':''}" ${allowed.includes(k)?'':'disabled'}>${ST[k]}</button>`).join('')}</div>`;
+}
+function progressField(v){
+  return `<div class="range-row"><input type="range" min="0" max="100" step="5" value="${v}" id="prog"><span class="val" id="progVal">${v}%</span></div>
+    <div class="quick">${[0,25,50,75,100].map(q => `<button type="button" data-q="${q}">${q}%</button>`).join('')}</div>`;
+}
+/* Связка статуса и прогресса — как на сервере */
+function wireStatusProgress(ov, t, allowed){
+  let status = t.status, manual = false;
+  const seg = ov.querySelector('#seg'), prog = ov.querySelector('#prog'), val = ov.querySelector('#progVal');
+  const setStatus = s => { status = s; seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === s)); };
+  const onProg = () => {
+    val.textContent = prog.value + '%';
+    if (!manual) {
+      const p = +prog.value;
+      if (p === 100 && ['new','progress'].includes(t.status) && allowed.includes('review')) setStatus('review');
+      else if (p > 0 && p < 100 && t.status === 'new') setStatus('progress');
+      else setStatus(t.status);
+    }
+  };
+  seg.onclick = e => {
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    manual = true; setStatus(b.dataset.v);
+    if (b.dataset.v === 'done') { prog.value = 100; val.textContent = '100%'; }
+  };
+  prog.oninput = onProg;
+  ov.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { prog.value = b.dataset.q; onProg(); });
+  return () => ({status, progress: +prog.value});
+}
+
+function openTask(id){
+  const t = state.tasks.find(x => x.id === id); if (!t) return;
+  if (isAdmin()) return openEditor(t);
+  if (t.assignee === me() && t.status !== 'done') return openMethodist(t);
+  openView(t);
+}
+
+function infoBlock(t){
+  const due = dueInfo(t);
+  return `<div class="meta-line">
+      <span>Статус: <b class="pill s-${t.status}">${ST[t.status]}</b></span>
+      <span>Приоритет: <b>${PR[t.priority]}</b></span>
+      ${t.deadline ? `<span>Срок: <b class="due ${due.cls}">${fmtDate(t.deadline)}</b></span>` : ''}
+      ${t.assignee ? `<span>Исполнитель: <b>${esc(t.assignee)}</b></span>` : ''}
+    </div>
+    <div class="field"><label>Описание</label><div class="readonly${t.desc ? '' : ' muted'}">${t.desc ? esc(t.desc) : 'Без описания'}</div></div>`;
+}
+
+function openView(t){
+  modal(`<div class="m-head"><h3>${esc(t.title)}</h3><button class="x" data-close>×</button></div>
+    <div class="m-body">
+      ${t.status === 'done' && t.assignee === me() ? `<div class="notice s-done">Задание принято замдекана.</div>` : ''}
+      ${infoBlock(t)}
+      ${t.assignee ? `<div class="field"><label>Прогресс</label><div class="c-prog s-${t.status}"><div class="bar"><i style="width:${t.progress}%"></i></div><span>${t.progress}%</span></div></div>` : ''}
+      ${t.note ? `<div class="field"><label>Комментарий исполнителя</label><div class="readonly">${esc(t.note)}</div></div>` : ''}
+      ${histHTML(t)}
+    </div>
+    <div class="m-foot"><span class="sp"></span><button class="btn" data-close>Закрыть</button></div>`);
+}
+
+function openMethodist(t){
+  const allowed = ['new','progress','review'];
+  const ov = modal(`<div class="m-head"><h3>${esc(t.title)}</h3><button class="x" data-close>×</button></div>
+    <div class="m-body">
+      ${t.status === 'review' ? `<div class="notice s-review">Задание отправлено на проверку замдекана. Можно вернуть его в работу, если нужно доработать.</div>` : ''}
+      ${infoBlock(t)}
+      <div class="field"><label>Статус выполнения</label>${statusSeg(t.status, allowed)}
+        <div class="hint">«Выполнено» отмечает замдекана после проверки.</div></div>
+      <div class="field"><label>Прогресс</label>${progressField(t.progress)}</div>
+      <div class="field"><label>Комментарий для замдекана</label><textarea class="input" id="note" placeholder="Что сделано, что мешает, ссылка на документ…">${esc(t.note)}</textarea></div>
+      ${histHTML(t)}
+    </div>
+    <div class="m-foot"><span class="sp"></span><button class="btn" data-close>Отмена</button><button class="btn primary" id="save">Сохранить</button></div>`);
+  const get = wireStatusProgress(ov, t, allowed);
+  ov.querySelector('#save').onclick = async () => {
+    try { await api('/api/tasks/'+t.id, {...get(), note: ov.querySelector('#note').value}); closeModal(); toast('Сохранено'); }
+    catch(err) { toast(err.message, true); }
+  };
+}
+
+function openEditor(t){
+  const isNew = !t;
+  t = t || {title:'', desc:'', deadline:'', priority:'normal', assignee:null, status:'new', progress:0, note:''};
+  const allowed = Object.keys(ST);
+  const ov = modal(`<div class="m-head"><h3>${isNew ? 'Новое задание' : 'Задание'}</h3><button class="x" data-close>×</button></div>
+    <div class="m-body">
+      ${t.status === 'review' ? `<div class="notice s-review">Исполнитель (<b>${esc(t.assignee)}</b>) отметил задание как готовое. Примите его или верните в работу.</div>` : ''}
+      <div class="field"><label>Название *</label><input class="input" id="title" value="${esc(t.title)}" placeholder="Например: Подготовить отчёт по практике" maxlength="300"></div>
+      <div class="field"><label>Описание</label><textarea class="input" id="desc" placeholder="Подробности, требования, ссылки">${esc(t.desc)}</textarea></div>
+      <div class="row">
+        <div class="field"><label>Срок</label><input class="input" type="date" id="deadline" value="${esc(t.deadline)}"></div>
+        <div class="field"><label>Приоритет</label><select class="input" id="priority">${Object.keys(PR).map(k => `<option value="${k}"${k===t.priority?' selected':''}>${PR[k]}</option>`).join('')}</select></div>
+        <div class="field"><label>Исполнитель</label><select class="input" id="assignee"><option value="">— Банк заданий —</option>${state.methodists.map(m => `<option${m===t.assignee?' selected':''}>${esc(m)}</option>`).join('')}</select></div>
+      </div>
+      ${isNew ? '' : `
+        <div class="field"><label>Статус</label>${statusSeg(t.status, allowed)}</div>
+        <div class="field"><label>Прогресс</label>${progressField(t.progress)}</div>
+        ${t.note ? `<div class="field"><label>Комментарий исполнителя</label><div class="readonly">${esc(t.note)}</div></div>` : ''}
+        ${histHTML(t)}`}
+    </div>
+    <div class="m-foot">
+      ${isNew ? '' : '<button class="btn danger" id="del">Удалить</button>'}
+      <span class="sp"></span>
+      ${t.status === 'review' ? '<button class="btn" id="ret">Вернуть в работу</button><button class="btn ok" id="acc">Принять</button>' : ''}
+      <button class="btn" data-close>Отмена</button>
+      <button class="btn primary" id="save">${isNew ? 'Создать' : 'Сохранить'}</button>
+    </div>`);
+  const get = isNew ? () => ({}) : wireStatusProgress(ov, t, allowed);
+  const fields = () => ({
+    title: ov.querySelector('#title').value, desc: ov.querySelector('#desc').value,
+    deadline: ov.querySelector('#deadline').value, priority: ov.querySelector('#priority').value,
+    assignee: ov.querySelector('#assignee').value || null
+  });
+  const run = async (fn, msg) => { try { await fn(); closeModal(); toast(msg); } catch(err) { toast(err.message, true); } };
+  ov.querySelector('#title').focus();
+  ov.querySelector('#save').onclick = () => {
+    if (!ov.querySelector('#title').value.trim()) return toast('Введите название задания', true);
+    run(() => isNew ? api('/api/tasks', fields()) : api('/api/tasks/'+t.id, {...fields(), ...get()}), isNew ? 'Задание создано' : 'Сохранено');
+  };
+  ov.querySelector('#del')?.addEventListener('click', () => {
+    if (confirm('Удалить задание «'+t.title+'»?')) run(() => api('/api/tasks/'+t.id+'/delete'), 'Задание удалено');
+  });
+  ov.querySelector('#acc')?.addEventListener('click', () => run(() => api('/api/tasks/'+t.id, {status:'done'}), 'Задание принято'));
+  ov.querySelector('#ret')?.addEventListener('click', () => run(() => api('/api/tasks/'+t.id, {status:'progress'}), 'Возвращено в работу'));
+}
+
+/* ---------- Login ---------- */
+function showLogin(){
+  const ms = state.methodists.length ? state.methodists : ['Эльмира','Улзира','Перизат'];
+  const ov = modal(`<div class="m-head"><h3>Кто вы?</h3></div>
+    <div class="m-body">
+      <p style="margin:0 0 14px;color:var(--muted)">Выберите себя — браузер запомнит выбор.</p>
+      <div class="roles">
+        ${ms.map((m,i) => `<button class="role c-m${i}" data-role="${esc(m)}"><span class="avatar">${esc(m[0])}</span><span>${esc(m)}<small>Методист</small></span></button>`).join('')}
+        <button class="role c-admin" data-role="admin"><span class="avatar">З</span><span>Замдекана<small>Распределение заданий</small></span></button>
+      </div>
+      <div class="pin-row" id="pinRow" hidden>
+        <input class="input" id="pin" type="password" inputmode="numeric" placeholder="PIN-код замдекана" autocomplete="off">
+        <button class="btn primary" id="pinGo">Войти</button>
+      </div>
+      <div class="err" id="err"></div>
+    </div>`, 'login');
+  const login = async a => {
+    try { auth = a; await api('/api/login'); ls.set('auth', JSON.stringify(a)); closeModal(); render(); }
+    catch(err) { auth = null; ov.querySelector('#err').textContent = err.message; }
+  };
+  ov.querySelectorAll('[data-role]').forEach(b => b.onclick = () => {
+    if (b.dataset.role === 'admin') { ov.querySelector('#pinRow').hidden = false; ov.querySelector('#pin').focus(); }
+    else login({role: b.dataset.role});
+  });
+  ov.querySelector('#pinGo').onclick = () => login({role:'admin', pin: ov.querySelector('#pin').value});
+  ov.querySelector('#pin').onkeydown = e => { if (e.key === 'Enter') ov.querySelector('#pinGo').click(); };
+}
+
+/* ---------- Start ---------- */
+(async function start(){
+  const as = new URLSearchParams(location.search).get('as');
+  await poll();
+  if (as && state.methodists.includes(as)) { auth = {role: as}; ls.set('auth', JSON.stringify(auth)); }
+  if (auth && auth.role !== 'admin' && state.methodists.length && !state.methodists.includes(auth.role)) { auth = null; ls.set('auth', null); }
+  if (!auth) showLogin();
+  render();
+  setInterval(poll, 3000);
+  setInterval(() => { if (!dragId && !$('#ov')) render(); }, 60000); // освежить «N мин назад»
+})();
+</script>
+</body>
+</html>
