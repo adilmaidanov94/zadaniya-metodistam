@@ -8,19 +8,25 @@
   ZAM_PIN  — PIN-код замдекана (по умолчанию 1234)
 """
 import json
+import mimetypes
 import os
 import re
 import socket
 import threading
 import time
+import unicodedata
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(ROOT, "data")
 DATA_FILE = os.path.join(DATA_DIR, "tasks.json")
-INDEX_FILE = os.path.join(ROOT, "static", "index.html")
+STATIC_DIR = os.path.join(ROOT, "static")
+INDEX_FILE = os.path.join(STATIC_DIR, "index.html")
+AVATAR_DIR = os.path.join(STATIC_DIR, "avatars")
+IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg")
+ONLINE_SECONDS = 15
 
 PORT = int(os.environ.get("PORT", "8080"))
 PIN = os.environ.get("ZAM_PIN", "1234")
@@ -32,6 +38,7 @@ PRIORITIES = ["low", "normal", "high"]
 ADMIN_NAME = "Замдекана"
 
 lock = threading.Lock()
+PRESENCE = {}  # кто открыл доску: имя -> время последнего опроса
 
 
 def now():
@@ -187,24 +194,40 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def snapshot(self):
-        return {"version": STATE["version"], "tasks": STATE["tasks"], "methodists": METHODISTS}
+        t = time.time()
+        online = [n for n, seen in PRESENCE.items() if t - seen < ONLINE_SECONDS]
+        return {"version": STATE["version"], "tasks": STATE["tasks"], "methodists": METHODISTS,
+                "online": online, "avatars": avatars(), "logo": logo()}
+
+    def send_file(self, path):
+        with open(path, "rb") as f:
+            data = f.read()
+        ctype = mimetypes.guess_type(path)[0] or "application/octet-stream"
+        if ctype.startswith("text/"):
+            ctype += "; charset=utf-8"
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
 
     def do_GET(self):
-        path = urlparse(self.path).path
+        url = urlparse(self.path)
+        path = url.path
         if path in ("/", "/index.html"):
-            with open(INDEX_FILE, "rb") as f:
-                data = f.read()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(data)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(data)
-        elif path == "/api/state":
+            return self.send_file(INDEX_FILE)
+        if path == "/api/state":
+            who_ = nfc(parse_qs(url.query).get("who", [""])[0])
             with lock:
-                self.send_json(200, self.snapshot())
-        else:
-            self.send_json(404, {"error": "Не найдено"})
+                if who_ in METHODISTS or who_ == "admin":
+                    PRESENCE[who_] = time.time()
+                return self.send_json(200, self.snapshot())
+        # Остальные файлы из static/ (фото, логотип); выйти за пределы папки нельзя
+        full = os.path.realpath(os.path.join(STATIC_DIR, unquote(path).lstrip("/")))
+        if full.startswith(os.path.realpath(STATIC_DIR) + os.sep) and os.path.isfile(full):
+            return self.send_file(full)
+        self.send_json(404, {"error": "Не найдено"})
 
     def do_POST(self):
         path = urlparse(self.path).path
@@ -299,6 +322,28 @@ class Handler(BaseHTTPRequestHandler):
             t["order"] = i
         task["updated_at"] = now()
         task["updated_by"] = ADMIN_NAME
+
+
+def nfc(s):
+    return unicodedata.normalize("NFC", s)
+
+
+def avatars():
+    """Фото методистов: static/avatars/<Имя>.jpg (png, webp...)."""
+    found = {}
+    if os.path.isdir(AVATAR_DIR):
+        for fn in os.listdir(AVATAR_DIR):
+            stem, ext = os.path.splitext(fn)
+            if ext.lower() in IMAGE_EXT and nfc(stem) in METHODISTS + [ADMIN_NAME]:
+                found[nfc(stem)] = "avatars/" + fn
+    return found
+
+
+def logo():
+    for ext in IMAGE_EXT:
+        if os.path.exists(os.path.join(STATIC_DIR, "logo" + ext)):
+            return "logo" + ext
+    return None
 
 
 def lan_ip():

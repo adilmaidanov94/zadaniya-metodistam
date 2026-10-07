@@ -3,3 +3,5 @@ __pycache__/
 .DS_Store
 .claude/
 Сообщение_WhatsApp_*.txt
+static/avatars/*
+!static/avatars/README.txt
