@@ -117,12 +117,24 @@ def update_task(task, body, user):
     old_status = task["status"]
     old_progress = task["progress"]
 
+    # Сначала все проверки, чтобы отказ не оставлял задание изменённым наполовину
+    if user == "admin":
+        allowed_statuses = STATUSES
+        if "title" in body and not str(body["title"]).strip():
+            raise ValueError("Название не может быть пустым")
+    else:
+        if task.get("assignee") != user:
+            raise PermissionError("Это задание назначено другому методисту")
+        if task["status"] == "done":
+            raise PermissionError("Задание уже принято замдекана")
+        allowed_statuses = ["new", "progress", "review"]
+    new_status = body.get("status", old_status)
+    if new_status not in allowed_statuses:
+        raise PermissionError("Этот статус недоступен")
+
     if user == "admin":
         if "title" in body:
-            title = str(body["title"]).strip()[:300]
-            if not title:
-                raise ValueError("Название не может быть пустым")
-            task["title"] = title
+            task["title"] = str(body["title"]).strip()[:300]
         if "desc" in body:
             task["desc"] = str(body["desc"])[:5000]
         if "deadline" in body:
@@ -135,23 +147,12 @@ def update_task(task, body, user):
                 rest = column(target, exclude=task)
                 task["order"] = (rest[-1]["order"] + 1) if rest else 0
                 set_assignee(task, target, by)
-        allowed_statuses = STATUSES
-    else:
-        if task.get("assignee") != user:
-            raise PermissionError("Это задание назначено другому методисту")
-        if task["status"] == "done":
-            raise PermissionError("Задание уже принято замдекана")
-        allowed_statuses = ["new", "progress", "review"]
 
     if "note" in body:
         note = str(body["note"])[:3000]
         if note != task.get("note", ""):
             task["note"] = note
             log(task, by, "Обновлён комментарий")
-
-    new_status = body.get("status", old_status)
-    if new_status not in allowed_statuses:
-        raise PermissionError("Этот статус недоступен")
 
     if "progress" in body:
         pr = clamp_progress(body["progress"])

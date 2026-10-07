@@ -199,25 +199,165 @@ const isAdmin = () => auth?.role === 'admin';
 const me = () => isAdmin() ? null : auth?.role;
 const mClass = name => { const i = state.methodists.indexOf(name); return i >= 0 ? 'c-m'+i : (name === 'admin' ? 'c-admin' : 'c-bank'); };
 
+/* ---------- Демо-режим (GitHub Pages / файл): та же логика, что в server.py, данные в localStorage ---------- */
+const DEMO = location.protocol === 'file:' || location.hostname.endsWith('github.io') || new URLSearchParams(location.search).has('demo');
+const Demo = (() => {
+  const KEY = 'demoState', METH = ['Эльмира','Улзира','Перизат'], PIN = '1234', ADMIN = 'Замдекана';
+  const STATUSES = ['new','progress','review','done'], PRIOS = ['low','normal','high'];
+  const now = () => new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+  const ymd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  let s = null;
+
+  function who(a){
+    if (!a) return null;
+    if (a.role === 'admin') return String(a.pin ?? '') === PIN ? 'admin' : null;
+    return METH.includes(a.role) ? a.role : null;
+  }
+  const column = (who, ex) => s.tasks.filter(t => t.assignee === who && t !== ex).sort((a,b) => a.order - b.order);
+  const cleanDate = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '';
+  function log(t, by, text){ (t.log ||= []).push({at: now(), by, text}); t.log = t.log.slice(-60); }
+  function setStatus(t, st, by){
+    if (st === t.status) return;
+    t.status = st;
+    if (st === 'done') { t.progress = 100; t.done_at = now(); } else t.done_at = null;
+    log(t, by, 'Статус: ' + ST[st]);
+  }
+  function setAssignee(t, a, by){
+    if (t.assignee === a) return;
+    t.assignee = a; t.assigned_at = a ? now() : null;
+    log(t, by, a ? 'Назначено: ' + a : 'Возвращено в банк заданий');
+  }
+  function create(b, user){
+    if (user !== 'admin') throw new Error('Создавать задания может только замдекана');
+    const title = String(b.title ?? '').trim().slice(0, 300);
+    if (!title) throw new Error('Введите название задания');
+    const a = METH.includes(b.assignee) ? b.assignee : null, col = column(a);
+    const t = {id: Math.random().toString(16).slice(2, 12), title, desc: String(b.desc ?? '').slice(0, 5000),
+      deadline: cleanDate(b.deadline), priority: PRIOS.includes(b.priority) ? b.priority : 'normal',
+      assignee: null, status: 'new', progress: 0, note: '', order: col.length ? col[0].order - 1 : 0,
+      created_at: now(), updated_at: now(), updated_by: ADMIN, assigned_at: null, done_at: null, log: []};
+    log(t, ADMIN, 'Задание создано'); setAssignee(t, a, ADMIN);
+    s.tasks.push(t); return t;
+  }
+  function update(t, b, user){
+    const by = user === 'admin' ? ADMIN : user, oldS = t.status, oldP = t.progress;
+    let allowed;
+    if (user === 'admin') {
+      allowed = STATUSES;
+      if ('title' in b && !String(b.title).trim()) throw new Error('Название не может быть пустым');
+    } else {
+      if (t.assignee !== user) throw new Error('Это задание назначено другому методисту');
+      if (t.status === 'done') throw new Error('Задание уже принято замдекана');
+      allowed = ['new','progress','review'];
+    }
+    let ns = b.status ?? oldS;
+    if (!allowed.includes(ns)) throw new Error('Этот статус недоступен');
+    if (user === 'admin') {
+      if ('title' in b) t.title = String(b.title).trim().slice(0, 300);
+      if ('desc' in b) t.desc = String(b.desc).slice(0, 5000);
+      if ('deadline' in b) t.deadline = cleanDate(b.deadline);
+      if (PRIOS.includes(b.priority)) t.priority = b.priority;
+      if ('assignee' in b) {
+        const target = METH.includes(b.assignee) ? b.assignee : null;
+        if (target !== t.assignee) { const rest = column(target, t); t.order = rest.length ? rest[rest.length-1].order + 1 : 0; setAssignee(t, target, by); }
+      }
+    }
+    if ('note' in b) { const n = String(b.note).slice(0, 3000); if (n !== (t.note || '')) { t.note = n; log(t, by, 'Обновлён комментарий'); } }
+    if ('progress' in b) {
+      const p = Math.max(0, Math.min(100, parseInt(b.progress, 10)));
+      if (!isNaN(p) && p !== oldP) {
+        t.progress = p; log(t, by, 'Прогресс: ' + p + '%');
+        if (ns === oldS) { if (p === 100 && ['new','progress'].includes(ns)) ns = 'review'; else if (p > 0 && ns === 'new') ns = 'progress'; }
+      }
+    }
+    setStatus(t, ns, by); t.updated_at = now(); t.updated_by = by;
+  }
+  function move(t, b, user){
+    if (user !== 'admin') throw new Error('Распределять задания может только замдекана');
+    const target = METH.includes(b.assignee) ? b.assignee : null, col = column(target, t);
+    const i = col.findIndex(x => x.id === b.before);
+    col.splice(i < 0 ? col.length : i, 0, t);
+    setAssignee(t, target, ADMIN); col.forEach((x, k) => x.order = k);
+    t.updated_at = now(); t.updated_by = ADMIN;
+  }
+  function seed(){
+    s = {version: 1, tasks: []};
+    const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return ymd(x); };
+    const mk = (title, priority, days, assignee, desc='') => create({title, priority, deadline: days == null ? '' : d(days), assignee, desc}, 'admin');
+    const t1 = mk('Отчёт по практике за осенний семестр', 'high', -1, 'Эльмира', 'Собрать отчёты с кафедр и свести в одну таблицу.');
+    mk('Сверка ведомостей в Platonus', 'high', 0, 'Эльмира');
+    const t3 = mk('Обновить РУПы 1 курса', 'normal', 12, 'Улзира');
+    const t4 = mk('Список академических должников', 'normal', 7, 'Улзира');
+    const t5 = mk('Расписание консультаций', 'low', null, 'Перизат');
+    mk('Подготовить приказы на стипендию', 'normal', 17, null);
+    mk('Анкетирование «Преподаватель глазами студентов»', 'low', 20, null);
+    update(t1, {progress: 60, note: 'Собраны 3 отчёта из 5'}, 'Эльмира');
+    update(t3, {progress: 100}, 'Улзира'); update(t3, {status: 'done'}, 'admin');
+    update(t4, {progress: 40}, 'Улзира');
+    update(t5, {progress: 100, note: 'Черновик расписания готов, прошу проверить'}, 'Перизат');
+    return s;
+  }
+  function load(){ try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && Array.isArray(v.tasks)) return (s = v); } catch(e) {} return seed(); }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(s)); } catch(e) {} }
+  const snapshot = () => ({version: s.version, tasks: JSON.parse(JSON.stringify(s.tasks)), methodists: METH});
+
+  return {
+    snapshot,
+    reload: load,
+    reset(){ seed(); s.version = Date.now(); save(); },
+    call(path, body){
+      if (!s) load();
+      const user = who(body.auth);
+      if (path === '/api/login') { if (user) return {ok: true}; throw new Error('Неверный PIN-код'); }
+      if (!user) throw new Error('Нет доступа. Войдите заново.');
+      const parts = path.replace(/^\/|\/$/g, '').split('/');
+      let task;
+      if (parts.length === 2) task = create(body, user);
+      else {
+        task = s.tasks.find(t => t.id === parts[2]);
+        if (!task) throw new Error('Задание не найдено (возможно, удалено)');
+        const action = parts[3] || 'update';
+        if (action === 'update') update(task, body, user);
+        else if (action === 'move') move(task, body, user);
+        else if (action === 'delete') {
+          if (user !== 'admin') throw new Error('Удалять задания может только замдекана');
+          s.tasks.splice(s.tasks.indexOf(task), 1);
+        }
+      }
+      s.version++; save();
+      return {ok: true, task, ...snapshot()};
+    },
+    init(){ if (!s) load(); save(); }
+  };
+})();
+if (DEMO) {
+  Demo.init();
+  window.addEventListener('storage', e => { if (e.key === 'demoState') { Demo.reload(); poll(); } });
+}
+
 /* ---------- API ---------- */
 async function api(path, body={}){
-  const r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...body, auth})});
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || 'Ошибка сервера');
+  let data;
+  if (DEMO) data = Demo.call(path, {...body, auth});
+  else {
+    const r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...body, auth})});
+    data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Ошибка сервера');
+  }
   if (data.version) { state = {version:data.version, tasks:data.tasks, methodists:data.methodists}; safeRender(); }
   return data;
 }
 async function poll(){
   try{
-    const r = await fetch('/api/state', {cache:'no-store'});
-    const data = await r.json();
+    const data = DEMO ? Demo.snapshot() : await (await fetch('/api/state', {cache:'no-store'})).json();
     setConn(true);
     if (data.version !== state.version) { state = data; safeRender(); }
   }catch(e){ setConn(false) }
 }
 function setConn(ok){
   $('#conn').classList.toggle('off', !ok);
-  $('#connText').textContent = ok ? 'на связи · обновляется автоматически' : 'нет связи с сервером';
+  $('#connText').textContent = DEMO ? 'демо-версия · данные хранятся только в этом браузере'
+    : ok ? 'на связи · обновляется автоматически' : 'нет связи с сервером';
 }
 function safeRender(){ if (dragId) pendingRender = true; else render(); }
 
@@ -283,8 +423,10 @@ function renderHeader(){
   $('#actions').innerHTML = `
     <button class="btn ghost small" id="toggleDone">${hideDone ? 'Показать выполненные' : 'Скрыть выполненные'}</button>
     ${isAdmin() ? '<button class="btn primary" id="addBtn">+ Новое задание</button>' : ''}
+    ${DEMO ? '<button class="btn ghost small" id="resetDemo" title="Вернуть примеры заданий">Сбросить демо</button>' : ''}
     <button class="who" id="whoBtn" title="Сменить пользователя"><span class="avatar ${isAdmin()?'c-admin':mClass(whoName)}">${esc(whoName[0])}</span>${esc(whoName)}</button>`;
   $('#toggleDone').onclick = () => { hideDone = !hideDone; ls.set('hideDone', hideDone ? '1' : '0'); render(); };
+  $('#resetDemo')?.addEventListener('click', () => { if (confirm('Вернуть демо-доску к исходным примерам?')) { Demo.reset(); poll(); toast('Демо сброшено'); } });
   $('#whoBtn').onclick = () => { if (confirm('Выйти и выбрать другого пользователя?')) { auth = null; ls.set('auth', null); render(); showLogin(); } };
   if (isAdmin()) $('#addBtn').onclick = () => openEditor(null);
 }
@@ -547,6 +689,7 @@ function showLogin(){
   const ov = modal(`<div class="m-head"><h3>Кто вы?</h3></div>
     <div class="m-body">
       <p style="margin:0 0 14px;color:var(--muted)">Выберите себя — браузер запомнит выбор.</p>
+      ${DEMO ? '<div class="notice s-progress">Это демо-версия: задания хранятся только в вашем браузере. PIN замдекана в демо — <b>1234</b>. Общая доска для методистов работает при запуске на локальном сервере.</div>' : ''}
       <div class="roles">
         ${ms.map((m,i) => `<button class="role c-m${i}" data-role="${esc(m)}"><span class="avatar">${esc(m[0])}</span><span>${esc(m)}<small>Методист</small></span></button>`).join('')}
         <button class="role c-admin" data-role="admin"><span class="avatar">З</span><span>Замдекана<small>Распределение заданий</small></span></button>
